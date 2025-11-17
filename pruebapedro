@@ -1,191 +1,120 @@
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ManitoGUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
----------------------------------------
--- FUNCION PARA HACER CUALQUIER FRAME DRAGGABLE
----------------------------------------
-local function makeDraggable(frame)
-    local dragging = false
-    local dragStart, startPos
-
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    frame.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-                                       startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
-
---------------------------------------------------
--- VENTANA PRINCIPAL
---------------------------------------------------
-local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 300, 0, 200)
-Main.Position = UDim2.new(0.3, 0, 0.3, 0)
-Main.BackgroundColor3 = Color3.fromRGB(32, 32, 32)
-Main.Active = true
-Main.Draggable = false
-Main.Parent = ScreenGui
-makeDraggable(Main)
-
---------------------------------------------------
--- BOTON CERRAR
---------------------------------------------------
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 25, 0, 25)
-CloseButton.Position = UDim2.new(1, -30, 0, 5)
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.new(1, 1, 1)
-CloseButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
-CloseButton.Parent = Main
-
-CloseButton.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
---------------------------------------------------
--- BOTON MINIMIZAR
---------------------------------------------------
-local Minimize = Instance.new("TextButton")
-Minimize.Size = UDim2.new(0, 25, 0, 25)
-Minimize.Position = UDim2.new(1, -60, 0, 5)
-Minimize.Text = "-"
-Minimize.TextColor3 = Color3.new(1, 1, 1)
-Minimize.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-Minimize.Parent = Main
-
---------------------------------------------------
--- CÍRCULO FLOTANTE CUANDO ESTÁ MINIMIZADO
---------------------------------------------------
-local Circle = Instance.new("Frame")
-Circle.Size = UDim2.new(0, 60, 0, 60)
-Circle.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
-Circle.Visible = false
-Circle.Parent = ScreenGui
-makeDraggable(Circle)
-
-local UICorner = Instance.new("UICorner", Circle)
-UICorner.CornerRadius = UDim.new(1, 0)
-
-Circle.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        Main.Visible = true
-        Circle.Visible = false
-    end
-end)
-
-Minimize.MouseButton1Click:Connect(function()
-    Main.Visible = false
-    Circle.Visible = true
-end)
-
---------------------------------------------------
--- OPCIONES Y TOGGLES
---------------------------------------------------
 local player = game.Players.LocalPlayer
-local humanoid = player.Character:WaitForChild("Humanoid")
 
--- Crear un layout
-local Layout = Instance.new("UIListLayout")
-Layout.Parent = Main
-Layout.Padding = UDim.new(0, 8)
-Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-Layout.VerticalAlignment = Enum.VerticalAlignment.Top
-Main.Padding = 10
+local gui = script.Parent
+local circle = gui:WaitForChild("CircleButton")
+local panel = gui:WaitForChild("AdminPanel")
 
-local function createToggle(name)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 250, 0, 30)
-    frame.BackgroundTransparency = 1
-    frame.Parent = Main
+local closeBtn = panel:WaitForChild("CloseBtn")
+local minBtn = panel:WaitForChild("MinBtn")
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.7, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.Text = name
-    label.Parent = frame
+local speedBtn = panel:WaitForChild("SpeedBtn")
+local jumpBtn = panel:WaitForChild("JumpBtn")
 
-    local checkbox = Instance.new("TextButton")
-    checkbox.Size = UDim2.new(0.2, 0, 1, 0)
-    checkbox.Position = UDim2.new(0.75, 0, 0, 0)
-    checkbox.Text = "OFF"
-    checkbox.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-    checkbox.TextColor3 = Color3.new(1, 1, 1)
-    checkbox.Parent = frame
+-- ajustes
+local DEFAULT_SPEED = 16
+local DEFAULT_JUMP = 50
+local SPEED_BOOST = 225
+local JUMP_BOOST = 100
 
-    return checkbox
+local speedOn = false
+local jumpOn = false
+
+----------------------------------------------------------------
+-- MAKE ELEMENTS DRAGGABLE
+----------------------------------------------------------------
+local UserInputService = game:GetService("UserInputService")
+
+local function makeDraggable(frame)
+	local dragging = false
+	local dragStart, startPos
+
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
 end
 
---------------------------------------------------
--- TOGGLES
---------------------------------------------------
-local speed100 = createToggle("Velocidad 100")
-local speed300 = createToggle("Supervelocidad 300")
-local jump = createToggle("Salto alto")
-local fuerza = createToggle("Fuerza extra")
-local nocool = createToggle("Quitar cooldown (desde tu script)")
+makeDraggable(panel)
+makeDraggable(circle)
 
---------------------------------------------------
--- FUNCIONES
---------------------------------------------------
-speed100.MouseButton1Click:Connect(function()
-    if speed100.Text == "OFF" then
-        speed100.Text = "ON"
-        speed100.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-        humanoid.WalkSpeed = 100
-    else
-        speed100.Text = "OFF"
-        speed100.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-        humanoid.WalkSpeed = 16
-    end
+----------------------------------------------------------------
+-- CÍRCULO ABRE/CERRA PANEL
+----------------------------------------------------------------
+circle.MouseButton1Click:Connect(function()
+	panel.Visible = not panel.Visible
 end)
 
-speed300.MouseButton1Click:Connect(function()
-    if speed300.Text == "OFF" then
-        speed300.Text = "ON"
-        speed300.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-        humanoid.WalkSpeed = 300
-    else
-        speed300.Text = "OFF"
-        speed300.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-        humanoid.WalkSpeed = 16
-    end
+----------------------------------------------------------------
+-- BOTÓN CERRAR
+----------------------------------------------------------------
+closeBtn.MouseButton1Click:Connect(function()
+	panel.Visible = false
+	circle.Visible = false
 end)
 
-jump.MouseButton1Click:Connect(function()
-    if jump.Text == "OFF" then
-        jump.Text = "ON"
-        jump.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-        humanoid.JumpPower = 75
-    else
-        jump.Text = "OFF"
-        jump.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-        humanoid.JumpPower = 50
-    end
+----------------------------------------------------------------
+-- BOTÓN MINIMIZAR
+----------------------------------------------------------------
+minBtn.MouseButton1Click:Connect(function()
+	panel.Visible = false
+	circle.Visible = true
 end)
 
-fuerza.MouseButton1Click:Connect(function()
-    print("⚠️ Aquí debes poner tu propia lógica de fuerza")
+----------------------------------------------------------------
+-- VELOCIDAD
+----------------------------------------------------------------
+speedBtn.MouseButton1Click:Connect(function()
+	speedOn = not speedOn
+	speedBtn.Text = speedOn and "Velocidad [ON]" or "Velocidad [OFF]"
+
+	local hum = player.Character and player.Character:FindFirstChildWhichIsA("Humanoid")
+	if hum then
+		hum.WalkSpeed = speedOn and SPEED_BOOST or DEFAULT_SPEED
+	end
 end)
 
-nocool.MouseButton1Click:Connect(function()
-    print("⚠️ Aquí conectas tu sistema para remover cooldowns en TU juego.")
+----------------------------------------------------------------
+-- SALTO
+----------------------------------------------------------------
+jumpBtn.MouseButton1Click:Connect(function()
+	jumpOn = not jumpOn
+	jumpBtn.Text = jumpOn and "Salto [ON]" or "Salto [OFF]"
+
+	local hum = player.Character and player.Character:FindFirstChildWhichIsA("Humanoid")
+	if hum then
+		hum.JumpPower = jumpOn and JUMP_BOOST or DEFAULT_JUMP
+	end
 end)
+
+----------------------------------------------------------------
+-- REAPLICAR AL RESPAWN
+----------------------------------------------------------------
+player.CharacterAdded:Connect(function(char)
+	task.wait(0.2)
+	local hum = char:WaitForChild("Humanoid")
+
+	hum.WalkSpeed = speedOn and SPEED_BOOST or DEFAULT_SPEED
+	hum.JumpPower = jumpOn and JUMP_BOOST or DEFAULT_JUMP
+end)
+
